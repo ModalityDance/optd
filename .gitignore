@@ -205,3 +205,26 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Research runtime artifacts and private material
+outputs/
+logs/
+wandb/
+swanlab_log/
+datasets/
+models/
+checkpoints/
+*.whl
+*.zip
+*.safetensors
+*.parquet
+*.jsonl
+*.pt
+*.pth
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+__pycache__/
+.pytest_cache/
