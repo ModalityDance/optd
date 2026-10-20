@@ -17,6 +17,8 @@
   </a>
   <p>
     <a href="#overview">Overview</a> ·
+    <a href="#usage-example">Usage</a> ·
+    <a href="#how-it-works">How it works</a> ·
     <a href="#checkpoints">Models</a> ·
     <a href="#inference">Inference</a> ·
     <a href="#getting-started">Training</a> ·
@@ -40,6 +42,53 @@ OPTD brings this additional supervision to **on-policy distillation**, where the
 For a given response prefix, we compare how teacher and student change the log probability of the same candidate token between two selected layers. This gives the student a training signal about the teacher's prediction changes along that part of the network. We apply this supervision across selected layer segments while retaining the standard final-output distillation objective.
 
 We study OPTD with DeepSeek-R1-Distill-Qwen-1.5B/7B and Qwen3-4B, using specialists in mathematics, coding, and instruction following. Each training prompt is supervised by the specialist for its domain. See [method details](docs/method.md) for the objective and implementation.
+
+## Usage Example
+
+Released checkpoints are complete models. A typical use is to load one checkpoint, format a prompt, and generate. Training a new student is covered in [Getting started](#getting-started).
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# 1) Load a released OPTD model (tokenizer included)
+model_id = "models/optd-qwen3-4b-late"  # or a Hub id such as ModalityDance/OPTD-Qwen3-4B-Late
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, torch_dtype=torch.bfloat16, device_map="auto"
+)
+
+# 2) Prepare a task prompt. Qwen3-4B Mid/Late use non-thinking mode.
+#    R1-Distill checkpoints omit enable_thinking=False.
+messages = [{"role": "user", "content": "Solve 2x + 5 = 17."}]
+text = tokenizer.apply_chat_template(
+    messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+)
+
+# 3) Generate and inspect the completion
+inputs = tokenizer(text, add_special_tokens=False, return_tensors="pt").to(model.device)
+with torch.inference_mode():
+    output = model.generate(
+        **inputs, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.95
+    )
+print(tokenizer.decode(output[0, inputs.input_ids.shape[-1]:], skip_special_tokens=True))
+```
+
+`max_new_tokens=1024` is only for this short prompt. Paper evaluation uses benchmark-specific limits. Download commands, the reasoning-mode variant, and dataset generation are in [Inference](#inference). The same snippet is the quick start on each [model card](docs/model_cards/OPTD-Qwen3-4B-Late.md).
+
+## How It Works
+
+OPTD is a modular on-policy distillation pipeline. Representation, teacher supervision, and the student update are separate stages, so the final-policy objective, the layer path, and the domain teachers can be changed without rewriting the rest of the trainer.
+
+At a high level, the workflow proceeds as follows:
+
+1. **On-policy generation** — The student samples a response for each training prompt. The prompt is routed to the specialist for its domain (mathematics, coding, or instruction following).
+2. **Transition comparison** — On the same response prefix and the same candidate tokens, teacher and student log probabilities are read at selected layers. Each segment contributes the change in log probability between its source and destination layer. The student is trained to match the teacher’s increments, using candidates from the teacher’s final-policy top-16 support.
+3. **Joint distillation** — The frozen teacher also supplies the usual final-layer distribution match. OPTD adds the transition losses, equally weighted across the selected path, to that final-policy objective.
+
+![Method overview of OPTD](assets/overview.png)
+
+Mid and Late name where those layers sit in the network. They are experimental variants, not successive releases. The practical update, layer indices, and the relation to reverse transition KL are in [method details](docs/method.md).
 
 ## Checkpoints
 

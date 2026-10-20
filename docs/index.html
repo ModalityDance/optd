@@ -27,6 +27,7 @@
     h3 { font-size:18px; margin:0 0 7px; }
     p { margin:0 0 15px; }
     .card { background:#fbf8f9; border-radius:12px; padding:23px; }
+    pre { background:#fbf8f9; border-radius:12px; padding:18px 20px; overflow-x:auto; font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
     table { width:100%; border-collapse:collapse; font-size:15px; }
     th,td { text-align:left; border-bottom:1px solid var(--line); padding:12px; }
     .scroll { overflow-x:auto; }
@@ -41,7 +42,7 @@
     <h1>On-Policy<br>Transition Distillation</h1>
     <p>Distill how a teacher refines its predictions across depth.</p>
     <nav aria-label="Project navigation">
-      <a href="../README.md#checkpoints">Models</a><a href="inference.md">Try a model</a><a href="#method">Method</a><a href="#experiments">Experiments</a><a href="../README.md">Code &amp; setup</a><a href="data.md">Models &amp; data</a>
+      <a href="../README.md#checkpoints">Models</a><a href="#usage">Usage</a><a href="#method">How it works</a><a href="#experiments">Experiments</a><a href="../README.md">Code &amp; setup</a><a href="data.md">Models &amp; data</a>
     </nav>
   </header>
   <figure>
@@ -53,8 +54,32 @@
     <p>On-policy distillation consolidates expert capabilities into a single student by matching teacher and student final-layer distributions on student-generated rollouts. We investigate whether depthwise prediction transitions—the changes in predictions between layers—can provide additional task-relevant supervision.</p>
     <p>Our diagnostic study associates stronger teacher–student agreement in intermediate transitions with higher answer correctness within questions. These observations motivate OPTD, which augments final-layer distribution matching by aligning teacher and student layer-to-layer log-probability increments. We evaluate three backbones on mathematics, coding, and instruction following.</p>
   </section>
+  <section id="usage">
+    <h2>Usage example</h2>
+    <p>Released checkpoints are complete models. Load one, format a prompt, and generate. Qwen3-4B Mid and Late use non-thinking mode; R1-Distill checkpoints omit <code>enable_thinking=False</code>.</p>
+    <pre>import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_id = "ModalityDance/OPTD-Qwen3-4B-Late"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, torch_dtype=torch.bfloat16, device_map="auto"
+)
+messages = [{"role": "user", "content": "Solve 2x + 5 = 17."}]
+text = tokenizer.apply_chat_template(
+    messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+)
+inputs = tokenizer(text, add_special_tokens=False, return_tensors="pt").to(model.device)
+with torch.inference_mode():
+    output = model.generate(
+        **inputs, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.95
+    )
+print(tokenizer.decode(output[0, inputs.input_ids.shape[-1]:], skip_special_tokens=True))</pre>
+    <p>The same pattern is the quick start on each model card. Dataset generation and downloads are in the <a href="../README.md#inference">inference guide</a>.</p>
+  </section>
   <section id="method">
-    <h2>Learning prediction transitions</h2>
+    <h2>How it works</h2>
+    <p>OPTD separates on-policy generation, depthwise transition comparison, and the student update. The final-policy objective, the selected layer path, and the domain teachers can be swapped without rewriting the rest of the trainer.</p>
     <div class="grid">
       <div class="card"><h3>1. Generate on-policy</h3><p>The student samples responses. Each prompt receives supervision from its corresponding domain specialist.</p></div>
       <div class="card"><h3>2. Compare increments</h3><p>Read teacher and student predictions at selected blocks on the same candidate tokens, then compare their log-probability changes.</p></div>
