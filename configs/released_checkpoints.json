@@ -1,0 +1,93 @@
+[
+  {
+    "repo_id": "ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid",
+    "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+    "step": 150,
+    "layers": [
+      7,
+      13,
+      19
+    ],
+    "domains": [
+      "math",
+      "coding"
+    ],
+    "revision": "800ec92fe578870e74df401a400a2b51a801ac99"
+  },
+  {
+    "repo_id": "ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late",
+    "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+    "step": 150,
+    "layers": [
+      11,
+      15,
+      19
+    ],
+    "domains": [
+      "math",
+      "coding"
+    ],
+    "revision": "57241e09a7ebd5a36c80897c69c17fd9a0ae7901"
+  },
+  {
+    "repo_id": "ModalityDance/OPTD-Qwen3-4B-Mid",
+    "base_model": "Qwen/Qwen3-4B",
+    "step": 50,
+    "layers": [
+      7,
+      13,
+      19
+    ],
+    "domains": [
+      "math",
+      "coding"
+    ],
+    "revision": "45e4f740ee974959c99ef6e9ab97a1ec2b386fb5"
+  },
+  {
+    "repo_id": "ModalityDance/OPTD-Qwen3-4B-Late",
+    "base_model": "Qwen/Qwen3-4B",
+    "step": 50,
+    "layers": [
+      14,
+      19,
+      24
+    ],
+    "domains": [
+      "math",
+      "coding"
+    ],
+    "revision": "c628ec8524a1564d62b83c163c0f2c479c7216f8"
+  },
+  {
+    "repo_id": "ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late",
+    "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+    "step": 100,
+    "layers": [
+      13,
+      17,
+      21
+    ],
+    "domains": [
+      "math",
+      "coding"
+    ],
+    "revision": "e9b49f3c9b33fd3667808cd4eafa6512176051a9"
+  },
+  {
+    "repo_id": "ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain",
+    "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+    "step": 150,
+    "layers": [
+      11,
+      15,
+      19
+    ],
+    "domains": [
+      "math",
+      "coding",
+      "instruction-following"
+    ],
+    "revision": "12485f39c4628521ff6f784978a176003197a7df"
+  }
+]

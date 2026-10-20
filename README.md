@@ -4,7 +4,7 @@
 
 **Learning how a teacher refines its predictions across depth.**
 
-[Overview](#overview) · [Getting started](#getting-started) · [Training guide](docs/training.md) · [Evaluation](docs/evaluation.md)
+[Overview](#overview) · [Models](#checkpoints) · [Inference](docs/inference.md) · [Training](#getting-started) · [Training guide](docs/training.md) · [Evaluation](docs/evaluation.md)
 
 </div>
 
@@ -22,7 +22,24 @@ For a given response prefix, we compare how teacher and student change the log p
 
 We study OPTD with DeepSeek-R1-Distill-Qwen-1.5B/7B and Qwen3-4B, using specialists in mathematics, coding, and instruction following. Each training prompt is supervised by the specialist for its domain. See [method details](docs/method.md) for the objective and implementation.
 
+## Checkpoints
+
+Six trained OPTD models are available for inference and evaluation. Choose a model size and the training domains relevant to your task:
+
+| Base model | Training domains | Available models | Generation mode |
+| --- | --- | --- | --- |
+| R1-Distill-Qwen-1.5B | Math + coding | [Mid](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid) · [Late](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late) | Reasoning |
+| R1-Distill-Qwen-1.5B | Math + coding + instruction following | [Three-domain](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain) | Reasoning |
+| Qwen3-4B | Math + coding | [Mid](https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Mid) · [Late](https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Late) | Non-thinking |
+| R1-Distill-Qwen-7B | Math + coding | [Late](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late) | Reasoning |
+
+**Mid** and **Late** refer to where transition supervision is applied during training: Late shifts the selected layers deeper into the network. They are experimental variants, not successive releases or a ranking of model quality. **Three-domain** adds an instruction-following specialist to math and coding supervision.
+
+Each release is a complete model with its tokenizer, ready to load with Transformers; teacher models are needed only for training. See [use a released model](docs/inference.md) for a working example, downloads, and fixed release revisions.
+
 ## Getting started
+
+To use an existing model, start with the [inference guide](docs/inference.md). The steps below are for training OPTD.
 
 ### 1. Install
 

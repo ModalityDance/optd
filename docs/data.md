@@ -1,5 +1,7 @@
 # Models and data
 
+This guide is for training and benchmark preparation. To use an already trained OPTD checkpoint, see [inference](inference.md).
+
 Weights and datasets are external prerequisites. The table below records the model identifiers used by the manuscript; download and verify the intended revisions before running comparisons. Public model IDs alone do not guarantee the exact checkpoint/tokenizer preparation used by the experiments.
 
 | Size | Student | Math specialist | Coding specialist |

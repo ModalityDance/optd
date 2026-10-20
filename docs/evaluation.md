@@ -1,6 +1,6 @@
 # Evaluation
 
-Use a merged Hugging Face actor checkpoint with the student tokenizer. The vendored merger is available through `python -m verl.model_merger --help`. Do not compare a different training step or prompt template to a paper result. Generation uses vLLM; coding grading requires a separately running SandboxFusion service at its `/run_code` endpoint.
+The [released OPTD models](../README.md#checkpoints) are already merged and ready for evaluation; download one following the [inference guide](inference.md). For a newly trained model, use a merged Hugging Face actor checkpoint with the student tokenizer. The vendored merger is available through `python -m verl.model_merger --help`. Do not compare a different training step or prompt template to a paper result. Generation uses vLLM; coding grading requires a separately running SandboxFusion service at its `/run_code` endpoint.
 
 | Task | Paper reporting | Generation |
 | --- | --- | --- |
