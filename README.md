@@ -1,11 +1,21 @@
 <div align="center">
-
-# OPTD: On-Policy Transition Distillation
-
-**Learning how a teacher refines its predictions across depth.**
-
-[Overview](#overview) · [Models](#checkpoints) · [Inference](docs/inference.md) · [Training](#getting-started) · [Training guide](docs/training.md) · [Evaluation](docs/evaluation.md)
-
+  <h1>OPTD: On-Policy Transition Distillation</h1>
+  <a href="https://github.com/ModalityDance/optd">
+    <img src="https://img.shields.io/badge/GitHub-Code-181717?style=for-the-badge&amp;logo=github" alt="GitHub Code">
+  </a>
+  <a href="https://huggingface.co/collections/ModalityDance/optd">
+    <img src="https://img.shields.io/badge/Hugging%20Face-Models-fcc21b?style=for-the-badge&amp;logo=huggingface&amp;logoColor=white" alt="Hugging Face Models">
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License">
+  </a>
+  <p>
+    <a href="#overview">Overview</a> ·
+    <a href="#checkpoints">Models</a> ·
+    <a href="docs/inference.md">Inference</a> ·
+    <a href="#getting-started">Training</a> ·
+    <a href="docs/evaluation.md">Evaluation</a>
+  </p>
 </div>
 
 Code for **On-Policy Transition Distillation (OPTD)**, a method for transferring specialist capabilities into a single language model.
