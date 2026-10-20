@@ -1,60 +1,57 @@
 # Use a released OPTD model
 
-Choose one of the [six released models](../README.md#checkpoints). Each contains complete student weights and a tokenizer: inference does not require a teacher or the training framework.
+The [README inference section](../README.md#inference) is the complete runbook: every checkpoint download, both generation modes, and every paper dataset. This note adds the release revisions, checksums, and template details behind those commands.
 
-## Run with Transformers
+Each of the six models contains student weights and a tokenizer. Inference does not require a teacher or a training job.
 
-Install PyTorch for your hardware, Transformers with Qwen3 support, and Accelerate. The training environment described in the README can also run this example.
+## Generation mode by size
 
-```bash
-python -m pip install torch transformers accelerate
-```
+| Checkpoint | Hub repository | Generation mode |
+| --- | --- | --- |
+| 1.5B Mid | [OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid) | Reasoning template |
+| 1.5B Late | [OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late) | Reasoning template |
+| 1.5B Three-domain | [OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain) | Reasoning template |
+| 4B Mid | [OPTD-Qwen3-4B-Mid](https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Mid) | `enable_thinking=False` |
+| 4B Late | [OPTD-Qwen3-4B-Late](https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Late) | `enable_thinking=False` |
+| 7B Late | [OPTD-DeepSeek-R1-Distill-Qwen-7B-Late](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late) | Reasoning template |
 
-The following example uses Qwen3-4B-Late on hardware that supports BF16:
+For either Qwen3-4B model, keep `enable_thinking=False`. For an R1-Distill model, omit that argument and use the tokenizer's native reasoning template. The model's tokenizer supplies the chat format. When the example first formats the chat as text, `add_special_tokens=False` avoids adding special tokens a second time.
+
+The 1,024-token limit in the README example is for a short demonstration. Dataset runs use the token limits in the [evaluation guide](evaluation.md).
+
+## Pinned downloads
+
+[released_checkpoints.json](../configs/released_checkpoints.json) records the original release commit for each model. The README download block already passes these revisions. To load a revision without a local directory, pass it to both `from_pretrained` calls:
 
 ```python
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-model_id = "ModalityDance/OPTD-Qwen3-4B-Late"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+revision = "c628ec8524a1564d62b83c163c0f2c479c7216f8"  # Qwen3-4B Late
+tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
 model = AutoModelForCausalLM.from_pretrained(
-    model_id, torch_dtype=torch.bfloat16, device_map="auto"
+    model_id, revision=revision, torch_dtype=torch.bfloat16, device_map="auto"
 )
-messages = [{"role": "user", "content": "Solve 2x + 5 = 17."}]
-text = tokenizer.apply_chat_template(
-    messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
-)
-inputs = tokenizer(text, add_special_tokens=False, return_tensors="pt").to(model.device)
-with torch.inference_mode():
-    output = model.generate(
-        **inputs, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.95
-    )
-response = output[0, inputs.input_ids.shape[-1]:]
-print(tokenizer.decode(response, skip_special_tokens=True))
 ```
 
-For either **Qwen3-4B** model, keep `enable_thinking=False`, matching the paper's non-thinking setting. For an **R1-Distill** model, change `model_id` and omit that argument to use its native reasoning template. The model's tokenizer supplies the chat format. Since the example first formats the chat as text, `add_special_tokens=False` avoids adding special tokens a second time.
+| Model | Revision |
+| --- | --- |
+| 1.5B Mid | `800ec92fe578870e74df401a400a2b51a801ac99` |
+| 1.5B Late | `57241e09a7ebd5a36c80897c69c17fd9a0ae7901` |
+| 1.5B Three-domain | `12485f39c4628521ff6f784978a176003197a7df` |
+| 4B Mid | `45e4f740ee974959c99ef6e9ab97a1ec2b386fb5` |
+| 4B Late | `c628ec8524a1564d62b83c163c0f2c479c7216f8` |
+| 7B Late | `e9b49f3c9b33fd3667808cd4eafa6512176051a9` |
 
-The 1,024-token limit is for this short demonstration; longer reasoning tasks may need more tokens. Use the [evaluation guide](evaluation.md) for the paper's sampling settings and benchmark token limits.
+Each model repository includes `training_metadata.json` and `checksums.json`, which records SHA256 hashes for the checkpoint and tokenizer files. Releases contain inference weights rather than optimizer state; they do not restore the complete state of an interrupted training run.
 
-## Download a local copy
+## Dataset entry points
 
-```bash
-python -m pip install huggingface_hub
-hf download ModalityDance/OPTD-Qwen3-4B-Late --local-dir models/optd-qwen3-4b-late
-```
+The README lists the full command for each dataset and the flag that changes with model size. Those flags are:
 
-Then use `models/optd-qwen3-4b-late` as `model_id` in the example. Teacher checkpoints are only needed to train a new student.
+| Dataset | Qwen3-4B Mid / Late | R1-Distill 1.5B / 7B |
+| --- | --- | --- |
+| AIME24, AIME25, AIMO | `--no-enable-thinking` on `eval_checkpoint_vllm.py` | thinking left on (script default) |
+| LiveCodeBench v5 | `--non-thinking` on `run_lcb_eval.py` | omit `--non-thinking` |
+| CodeContests-165 | `--non-thinking` on `run_deepmind_codecontests165_eval.py` | omit `--non-thinking` |
+| Codeforces | `eval_codeforces_codeelo_vllm.py` always sets `enable_thinking=False` | same script, same template |
+| IFEval | original checker, non-thinking prompt | original checker, reasoning template |
 
-## Reproduce a release version
-
-[released_checkpoints.json](../configs/released_checkpoints.json) records the original release commit for each model. For the 4B Late release:
-
-```bash
-hf download ModalityDance/OPTD-Qwen3-4B-Late \
-  --revision c628ec8524a1564d62b83c163c0f2c479c7216f8 \
-  --local-dir models/optd-qwen3-4b-late
-```
-
-You can also pass that commit as `revision=` to both `from_pretrained` calls. Each model repository includes `training_metadata.json` and `checksums.json`, which records SHA256 hashes for the checkpoint and tokenizer files. Releases contain inference weights rather than optimizer state; they do not restore the complete state of an interrupted training run.
+Math parquet files are `datasets/test_data/{AIME24,AIME25,AIMO}/test.parquet`. LiveCodeBench, CodeContests, and Codeforces files are external inputs; the commands in the README take their paths explicitly. IFEval grading stays on the original benchmark checker.

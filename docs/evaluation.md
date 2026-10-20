@@ -1,6 +1,6 @@
 # Evaluation
 
-The [released OPTD models](../README.md#checkpoints) are already merged and ready for evaluation; download one following the [inference guide](inference.md). For a newly trained model, use a merged Hugging Face actor checkpoint with the student tokenizer. The vendored merger is available through `python -m verl.model_merger --help`. Do not compare a different training step or prompt template to a paper result. Generation uses vLLM; coding grading requires a separately running SandboxFusion service at its `/run_code` endpoint.
+The [released OPTD models](../README.md#checkpoints) are already merged and ready for evaluation. Download one with the commands in the [README](../README.md#inference); the examples below use `models/optd-qwen3-4b-late`. For R1-Distill 1.5B and 7B, point `--model-path` at that checkpoint and omit `--no-enable-thinking` / `--non-thinking`. For a newly trained model, use a merged Hugging Face actor checkpoint with the student tokenizer. The vendored merger is available through `python -m verl.model_merger --help`. Compare a checkpoint only under the paper's training step and prompt template. Generation uses vLLM; coding grading requires a separately running SandboxFusion service at its `/run_code` endpoint.
 
 | Task | Paper reporting | Generation |
 | --- | --- | --- |
@@ -14,13 +14,14 @@ The [released OPTD models](../README.md#checkpoints) are already merged and read
 
 ```bash
 PYTHONPATH="$PWD/verl" python scripts/val/eval/eval_checkpoint_vllm.py \
-  --model-path /path/to/merged_actor \
+  --model-path models/optd-qwen3-4b-late \
   --data-dir datasets/test_data \
   --output-dir outputs/math \
-  --tasks AIME24 AIME25 AIMO --n 16
+  --tasks AIME24 AIME25 AIMO --n 16 \
+  --no-enable-thinking
 ```
 
-For Qwen3-4B, add `--no-enable-thinking`. The script saves generations. Run rule-based grading separately and retain per-question outcomes:
+Drop `--no-enable-thinking` for an R1-Distill 1.5B or 7B checkpoint. The script saves generations. Run rule-based grading separately and retain per-question outcomes:
 
 ```bash
 PYTHONPATH="$PWD/verl" python scripts/val/eval/grade.py --eval-dir outputs/math
@@ -32,13 +33,14 @@ The optional model-verifier branch is not enabled by this command. Match the pap
 
 ```bash
 PYTHONPATH="$PWD/verl" python scripts/val/eval/run_lcb_eval.py \
-  --model-path /path/to/merged_actor \
+  --model-path models/optd-qwen3-4b-late \
   --data-glob '/path/to/lcbv5/test-*.parquet' \
   --output-prefix outputs/lcb/batch_a \
-  --sandbox-url http://127.0.0.1:8080/run_code
+  --sandbox-url http://127.0.0.1:8080/run_code \
+  --non-thinking
 ```
 
-Run a second independent n=4 batch into `batch_b`; use `--non-thinking` for Qwen3-4B. Merge generations and verified verdicts together:
+Run a second independent n=4 batch into `batch_b` with the same template flag. Drop `--non-thinking` for an R1-Distill 1.5B or 7B checkpoint. Merge generations and verified verdicts together:
 
 ```bash
 python scripts/val/eval/merge_lcb_n8_complete.py \
@@ -55,13 +57,14 @@ The merge checks 279 unique problems, 1,116 candidates per n=4 batch, response h
 
 ```bash
 PYTHONPATH="$PWD/verl" python scripts/val/eval/run_deepmind_codecontests165_eval.py \
-  --model-path /path/to/merged_actor \
+  --model-path models/optd-qwen3-4b-late \
   --data /path/to/codecontests165.parquet \
   --output-prefix outputs/codecontests/run --n 16 \
-  --sandbox-url http://127.0.0.1:8080/run_code
+  --sandbox-url http://127.0.0.1:8080/run_code \
+  --non-thinking
 ```
 
-Add `--non-thinking` for Qwen3-4B. Verify 165 problems and 2,640 generated/graded candidates. The Codeforces generation helper is `eval_codeforces_codeelo_vllm.py`; the original canonical problem metadata, contest mapping, historical ratings, grading harness, and Elo estimator are external prerequisites. An Elo estimate requires the complete matched pipeline and cannot be obtained from generation output alone.
+Drop `--non-thinking` for an R1-Distill 1.5B or 7B checkpoint. Verify 165 problems and 2,640 generated/graded candidates. The Codeforces generation helper is `eval_codeforces_codeelo_vllm.py`; the original canonical problem metadata, contest mapping, historical ratings, grading harness, and Elo estimator are external prerequisites. An Elo estimate requires the complete matched pipeline and cannot be obtained from generation output alone.
 
 ## Instruction following and scope
 

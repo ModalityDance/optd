@@ -1,7 +1,13 @@
 <div align="center">
   <h1>OPTD: On-Policy Transition Distillation</h1>
-  <a href="https://github.com/ModalityDance/optd">
-    <img src="https://img.shields.io/badge/GitHub-Code-181717?style=for-the-badge&amp;logo=github" alt="GitHub Code">
+  <a href="https://arxiv.org/abs/XXXX.XXXXX">
+    <img src="https://img.shields.io/badge/arXiv-XXXX.XXXXX-b31b1b?style=for-the-badge" alt="arXiv">
+  </a>
+  <a href="https://huggingface.co/papers/XXXX.XXXXX">
+    <img src="https://img.shields.io/badge/Hugging%20Face-Paper-fcc21b?style=for-the-badge&amp;logo=huggingface&amp;logoColor=white" alt="Hugging Face Paper">
+  </a>
+  <a href="https://PROJECT_PAGE_URL">
+    <img src="https://img.shields.io/badge/Project-Page-2ea44f?style=for-the-badge" alt="Project Page">
   </a>
   <a href="https://huggingface.co/collections/ModalityDance/optd">
     <img src="https://img.shields.io/badge/Hugging%20Face-Models-fcc21b?style=for-the-badge&amp;logo=huggingface&amp;logoColor=white" alt="Hugging Face Models">
@@ -12,13 +18,16 @@
   <p>
     <a href="#overview">Overview</a> ·
     <a href="#checkpoints">Models</a> ·
-    <a href="docs/inference.md">Inference</a> ·
+    <a href="#inference">Inference</a> ·
     <a href="#getting-started">Training</a> ·
-    <a href="docs/evaluation.md">Evaluation</a>
+    <a href="docs/evaluation.md">Evaluation</a> ·
+    <a href="#citation">Citation</a>
   </p>
 </div>
 
 Code for **On-Policy Transition Distillation (OPTD)**, a method for transferring specialist capabilities into a single language model.
+
+`XXXX.XXXXX` and `PROJECT_PAGE_URL` are placeholders for the arXiv id, the Hugging Face paper page, and the project page.
 
 ## Overview
 
@@ -45,11 +54,208 @@ Six trained OPTD models are available for inference and evaluation. Choose a mod
 
 **Mid** and **Late** refer to where transition supervision is applied during training: Late shifts the selected layers deeper into the network. They are experimental variants, not successive releases or a ranking of model quality. **Three-domain** adds an instruction-following specialist to math and coding supervision.
 
-Each release is a complete model with its tokenizer, ready to load with Transformers; teacher models are needed only for training. See [use a released model](docs/inference.md) for a working example, downloads, and fixed release revisions.
+Each release is a complete model with its tokenizer. The [inference](#inference) section downloads every checkpoint and runs it on the paper's datasets. [Inference notes](docs/inference.md) record the pinned release revisions and checksums.
+
+## Inference
+
+Released checkpoints load with Transformers or vLLM. A teacher model is required only when training a new student.
+
+Single-prompt generation needs PyTorch, Transformers, and Accelerate. Dataset generation uses the [training environment](#1-install), which installs vLLM 0.11.0. Coding benchmarks also need a SandboxFusion service at `http://127.0.0.1:8080/run_code`.
+
+```bash
+python -m pip install torch transformers accelerate huggingface_hub
+```
+
+### Download
+
+`hf download` fetches the full checkpoint and tokenizer at the release revision. The same repository id can be passed straight to `from_pretrained` or vLLM.
+
+```bash
+# R1-Distill-Qwen-1.5B, math + coding, Mid (reasoning)
+hf download ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid \
+  --revision 800ec92fe578870e74df401a400a2b51a801ac99 \
+  --local-dir models/optd-deepseek-r1-distill-qwen-1.5b-mid
+
+# R1-Distill-Qwen-1.5B, math + coding, Late (reasoning)
+hf download ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late \
+  --revision 57241e09a7ebd5a36c80897c69c17fd9a0ae7901 \
+  --local-dir models/optd-deepseek-r1-distill-qwen-1.5b-late
+
+# R1-Distill-Qwen-1.5B, math + coding + instruction following (reasoning)
+hf download ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain \
+  --revision 12485f39c4628521ff6f784978a176003197a7df \
+  --local-dir models/optd-deepseek-r1-distill-qwen-1.5b-threedomain
+
+# Qwen3-4B, math + coding, Mid (non-thinking)
+hf download ModalityDance/OPTD-Qwen3-4B-Mid \
+  --revision 45e4f740ee974959c99ef6e9ab97a1ec2b386fb5 \
+  --local-dir models/optd-qwen3-4b-mid
+
+# Qwen3-4B, math + coding, Late (non-thinking)
+hf download ModalityDance/OPTD-Qwen3-4B-Late \
+  --revision c628ec8524a1564d62b83c163c0f2c479c7216f8 \
+  --local-dir models/optd-qwen3-4b-late
+
+# R1-Distill-Qwen-7B, math + coding, Late (reasoning)
+hf download ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late \
+  --revision e9b49f3c9b33fd3667808cd4eafa6512176051a9 \
+  --local-dir models/optd-deepseek-r1-distill-qwen-7b-late
+```
+
+| Size | Checkpoint | Local directory |
+| --- | --- | --- |
+| 1.5B Mid | [ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid) | `models/optd-deepseek-r1-distill-qwen-1.5b-mid` |
+| 1.5B Late | [ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late) | `models/optd-deepseek-r1-distill-qwen-1.5b-late` |
+| 1.5B Three-domain | [ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain) | `models/optd-deepseek-r1-distill-qwen-1.5b-threedomain` |
+| 4B Mid | [ModalityDance/OPTD-Qwen3-4B-Mid](https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Mid) | `models/optd-qwen3-4b-mid` |
+| 4B Late | [ModalityDance/OPTD-Qwen3-4B-Late](https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Late) | `models/optd-qwen3-4b-late` |
+| 7B Late | [ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late](https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late) | `models/optd-deepseek-r1-distill-qwen-7b-late` |
+
+Point `MODEL` at one directory from the table. Dataset commands below read `$MODEL`. The default is 4B Late.
+
+```bash
+# Qwen3-4B Mid or Late. These two checkpoints use non-thinking mode.
+export MODEL=models/optd-qwen3-4b-late
+
+# R1-Distill 1.5B Mid, 1.5B Late, 1.5B Three-domain, or 7B Late.
+# export MODEL=models/optd-deepseek-r1-distill-qwen-1.5b-late
+```
+
+### Single example
+
+Qwen3-4B Mid and Late keep `enable_thinking=False`. R1-Distill 1.5B and 7B use the tokenizer's reasoning chat template, so omit that argument. Because the chat string is already formatted, `add_special_tokens=False` avoids adding special tokens a second time. `max_new_tokens=1024` is only for this short prompt.
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Qwen3-4B Mid or Late. For an R1-Distill checkpoint, set model_id to that
+# local directory or Hub id and drop enable_thinking=False below.
+model_id = "models/optd-qwen3-4b-late"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, torch_dtype=torch.bfloat16, device_map="auto"
+)
+messages = [{"role": "user", "content": "Solve 2x + 5 = 17."}]
+text = tokenizer.apply_chat_template(
+    messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+)
+inputs = tokenizer(text, add_special_tokens=False, return_tensors="pt").to(model.device)
+with torch.inference_mode():
+    output = model.generate(
+        **inputs, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.95
+    )
+response = output[0, inputs.input_ids.shape[-1]:]
+print(tokenizer.decode(response, skip_special_tokens=True))
+```
+
+R1-Distill 1.5B Mid, 1.5B Late, 1.5B Three-domain, and 7B Late:
+
+```python
+model_id = "models/optd-deepseek-r1-distill-qwen-1.5b-late"
+text = tokenizer.apply_chat_template(
+    messages, tokenize=False, add_generation_prompt=True
+)
+```
+
+### Mathematics: AIME24, AIME25, AIMO
+
+Prepare `datasets/test_data/{AIME24,AIME25,AIMO}/test.parquet` as described in the [data guide](docs/data.md). Generation is Avg@16 at temperature 0.7, top-p 0.95, and 31,744 new tokens.
+
+Qwen3-4B passes `--no-enable-thinking`. R1-Distill 1.5B and 7B leave thinking enabled (the script default).
+
+```bash
+# Qwen3-4B Mid or Late
+PYTHONPATH="$PWD/verl" python scripts/val/eval/eval_checkpoint_vllm.py \
+  --model-path "$MODEL" \
+  --data-dir datasets/test_data \
+  --output-dir outputs/math \
+  --tasks AIME24 AIME25 AIMO --n 16 \
+  --no-enable-thinking
+
+# R1-Distill 1.5B or 7B: drop --no-enable-thinking
+PYTHONPATH="$PWD/verl" python scripts/val/eval/eval_checkpoint_vllm.py \
+  --model-path "$MODEL" \
+  --data-dir datasets/test_data \
+  --output-dir outputs/math \
+  --tasks AIME24 AIME25 AIMO --n 16
+
+PYTHONPATH="$PWD/verl" python scripts/val/eval/grade.py --eval-dir outputs/math
+```
+
+### Coding: LiveCodeBench v5
+
+LiveCodeBench v5 is 279 problems. Report Avg@8 and Pass@8 from two independently generated n=4 batches. Qwen3-4B adds `--non-thinking`; R1-Distill omits it.
+
+```bash
+# Batch A. Qwen3-4B Mid or Late:
+PYTHONPATH="$PWD/verl" python scripts/val/eval/run_lcb_eval.py \
+  --model-path "$MODEL" \
+  --data-glob '/path/to/lcbv5/test-*.parquet' \
+  --output-prefix outputs/lcb/batch_a \
+  --sandbox-url http://127.0.0.1:8080/run_code \
+  --non-thinking
+
+# R1-Distill 1.5B or 7B: the same command without --non-thinking.
+
+# Batch B uses a new output prefix and a fresh generation.
+PYTHONPATH="$PWD/verl" python scripts/val/eval/run_lcb_eval.py \
+  --model-path "$MODEL" \
+  --data-glob '/path/to/lcbv5/test-*.parquet' \
+  --output-prefix outputs/lcb/batch_b \
+  --sandbox-url http://127.0.0.1:8080/run_code \
+  --non-thinking
+
+python scripts/val/eval/merge_lcb_n8_complete.py \
+  --first-generation outputs/lcb/batch_a.jsonl \
+  --first-graded outputs/lcb/batch_a.graded.jsonl \
+  --second-generation outputs/lcb/batch_b.jsonl \
+  --second-graded outputs/lcb/batch_b.graded.jsonl \
+  --output-dir outputs/lcb/n8
+```
+
+### Coding: CodeContests
+
+The 165-problem CodeContests subset is Avg@16. Qwen3-4B adds `--non-thinking`.
+
+```bash
+PYTHONPATH="$PWD/verl" python scripts/val/eval/run_deepmind_codecontests165_eval.py \
+  --model-path "$MODEL" \
+  --data /path/to/codecontests165.parquet \
+  --output-prefix outputs/codecontests/run --n 16 \
+  --sandbox-url http://127.0.0.1:8080/run_code \
+  --non-thinking
+```
+
+Drop `--non-thinking` for R1-Distill 1.5B and 7B. A finished run covers 165 problems and 2,640 generated and graded candidates.
+
+### Coding: Codeforces
+
+The shipped generator scores 408 canonical problems at n=8 and always applies `enable_thinking=False`, for every model size. The parquet glob must match one shard. Elo still needs the external contest metadata and rating harness; generation output alone is not an Elo estimate. See the [evaluation guide](docs/evaluation.md).
+
+```bash
+PYTHONPATH="$PWD/verl" python scripts/val/eval/eval_codeforces_codeelo_vllm.py \
+  --repo "$PWD" \
+  --model "$MODEL" \
+  --data-glob '/path/to/codeforces/test.parquet' \
+  --output outputs/codeforces
+```
+
+### Instruction following: IFEval
+
+IFEval uses the original benchmark checker, 16 samples, and the mean of strict and loose prompt and instruction accuracy. This repository does not include that checker. The three-domain checkpoint is the 1.5B model trained with an instruction-following specialist:
+
+```text
+models/optd-deepseek-r1-distill-qwen-1.5b-threedomain
+```
+
+Run the same checker on the other five checkpoints when comparing sizes. Keep the model's generation mode: reasoning for every R1-Distill checkpoint, `enable_thinking=False` for both Qwen3-4B checkpoints.
+
+Sampling settings, merge checks, and grading coverage are in the [evaluation guide](docs/evaluation.md). Release commits and file hashes are in [inference notes](docs/inference.md).
 
 ## Getting started
 
-To use an existing model, start with the [inference guide](docs/inference.md). The steps below are for training OPTD.
+To use an existing model, follow [Inference](#inference). The steps below are for training OPTD.
 
 ### 1. Install
 
@@ -92,7 +298,23 @@ The [training guide](docs/training.md) covers the other model sizes, the three-d
 
 We evaluate mathematics on AIME24/25 and AIMO; coding on LiveCodeBench v5, CodeContests, and Codeforces; and instruction following on IFEval.
 
-See the [evaluation guide](docs/evaluation.md) for benchmark protocols, generation and grading commands, and required external resources.
+The commands in [Inference](#inference) run those datasets for each released model size. The [evaluation guide](docs/evaluation.md) records benchmark protocols, coverage checks, and required external resources.
+
+## Citation
+
+The arXiv id below is a placeholder. Use the same id in the badges at the top, `https://arxiv.org/abs/XXXX.XXXXX`, `https://huggingface.co/papers/XXXX.XXXXX`, and `https://PROJECT_PAGE_URL`.
+
+```bibtex
+@misc{optd2026,
+  title         = {On-Policy Transition Distillation},
+  author        = {Authors},
+  year          = {2026},
+  eprint        = {XXXX.XXXXX},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/XXXX.XXXXX}
+}
+```
 
 ## Acknowledgements and license
 
