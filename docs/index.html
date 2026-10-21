@@ -14,6 +14,8 @@
     .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.2em; font-size:14px; }
     h1 { font-size:clamp(34px,6vw,59px); line-height:1.12; letter-spacing:-.04em; margin:17px 0 23px; }
     header p { max-width:650px; margin:0 auto 27px; color:var(--muted); font-size:20px; }
+    header .authors { font-size:18px; color:var(--ink); margin-bottom:6px; }
+    header .affiliations { font-size:14px; max-width:850px; margin-bottom:28px; }
     nav { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
     a { color:var(--accent); text-underline-offset:4px; }
     nav a { padding:8px 20px; border:1px solid var(--line); border-radius:24px; text-decoration:none; }
@@ -41,19 +43,35 @@
     <div class="eyebrow">OPTD</div>
     <h1>On-Policy<br>Transition Distillation</h1>
     <p>Distill how a teacher refines its predictions across depth.</p>
+    <p class="authors">Runyang You<sup>1</sup> · Yongqi Li<sup>1</sup> · Tiezheng Yu<sup>2</sup> · Wenjie Li<sup>1</sup></p>
+    <p class="affiliations"><sup>1</sup> The Hong Kong Polytechnic University &nbsp; <sup>2</sup> Huawei Technologies Ltd.</p>
     <nav aria-label="Project navigation">
       <a href="https://arxiv.org/abs/2610.28048">Paper</a><a href="https://huggingface.co/papers/2610.28048">Hugging Face Paper</a>
-      <a href="../README.md#checkpoints">Models</a><a href="#usage">Usage</a><a href="#method">How it works</a><a href="#experiments">Experiments</a><a href="../README.md">Code &amp; setup</a><a href="data.md">Models &amp; data</a>
+      <a href="https://huggingface.co/collections/ModalityDance/optd">Models</a><a href="#usage">Usage</a><a href="#method">How it works</a><a href="#experiments">Experiments</a><a href="https://github.com/ModalityDance/optd/blob/main/README.md">Code &amp; setup</a><a href="https://github.com/ModalityDance/optd/blob/main/docs/data.md">Models &amp; data</a>
     </nav>
   </header>
   <figure>
-    <img src="../assets/overview.png" alt="OPTD compares teacher and student prediction transitions across selected depth segments, alongside final-policy distillation." width="1800" loading="eager">
+    <img src="assets/overview.png" alt="OPTD compares teacher and student prediction transitions across selected depth segments, alongside final-policy distillation." width="1800" loading="eager">
     <figcaption>Final-layer distribution matching and prediction-transition supervision on student-generated rollouts.</figcaption>
   </figure>
   <section id="abstract">
     <h2>Abstract</h2>
     <p>On-policy distillation consolidates expert capabilities into a single student by matching teacher and student final-layer distributions on student-generated rollouts. We investigate whether depthwise prediction transitions—the changes in predictions between layers—can provide additional task-relevant supervision.</p>
     <p>Our diagnostic study associates stronger teacher–student agreement in intermediate transitions with higher answer correctness within questions. These observations motivate OPTD, which augments final-layer distribution matching by aligning teacher and student layer-to-layer log-probability increments. We evaluate three backbones on mathematics, coding, and instruction following.</p>
+  </section>
+  <section id="models">
+    <h2>Released models</h2>
+    <p>Each release contains complete student weights and its tokenizer. Teacher models are needed only for training.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Student</th><th>Training domains</th><th>Checkpoints</th></tr></thead>
+      <tbody>
+        <tr><td>R1-Distill-Qwen-1.5B</td><td>Math + coding</td><td><a href="https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Mid">Mid</a> · <a href="https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-Late">Late</a></td></tr>
+        <tr><td>R1-Distill-Qwen-1.5B</td><td>Math + coding + instruction following</td><td><a href="https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-1.5B-ThreeDomain">Three-domain</a></td></tr>
+        <tr><td>Qwen3-4B</td><td>Math + coding</td><td><a href="https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Mid">Mid</a> · <a href="https://huggingface.co/ModalityDance/OPTD-Qwen3-4B-Late">Late</a></td></tr>
+        <tr><td>R1-Distill-Qwen-7B</td><td>Math + coding</td><td><a href="https://huggingface.co/ModalityDance/OPTD-DeepSeek-R1-Distill-Qwen-7B-Late">Late</a></td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin-top:15px">Mid and Late identify where transition supervision is applied during training. Qwen3-4B uses non-thinking mode; R1-Distill models use their native reasoning template.</p>
   </section>
   <section id="usage">
     <h2>Usage example</h2>
@@ -76,17 +94,17 @@ with torch.inference_mode():
         **inputs, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.95
     )
 print(tokenizer.decode(output[0, inputs.input_ids.shape[-1]:], skip_special_tokens=True))</pre>
-    <p>The same pattern is the quick start on each model card. Dataset generation and downloads are in the <a href="../README.md#inference">inference guide</a>.</p>
+    <p>The same pattern is the quick start on each model card. Dataset generation and downloads are in the <a href="https://github.com/ModalityDance/optd/blob/main/README.md#inference">inference guide</a>.</p>
   </section>
   <section id="method">
     <h2>How it works</h2>
-    <p>OPTD separates on-policy generation, depthwise transition comparison, and the student update. The final-policy objective, the selected layer path, and the domain teachers can be swapped without rewriting the rest of the trainer.</p>
+    <p>On student-generated responses, OPTD teaches the student to match both the teacher’s final prediction and how that prediction changes across selected layers.</p>
     <div class="grid">
       <div class="card"><h3>1. Generate on-policy</h3><p>The student samples responses. Each prompt receives supervision from its corresponding domain specialist.</p></div>
       <div class="card"><h3>2. Compare increments</h3><p>Read teacher and student predictions at selected blocks on the same candidate tokens, then compare their log-probability changes.</p></div>
       <div class="card"><h3>3. Distill both signals</h3><p>Retain final-policy OPD and add equally weighted transition updates across the selected path.</p></div>
     </div>
-    <p style="margin-top:20px">The practical update uses detached increment gaps and destination-layer student probabilities. Its relation to exact reverse transition-KL is treated separately. See <a href="method.md">implementation details</a>.</p>
+    <p style="margin-top:20px">The practical update uses detached increment gaps and destination-layer student probabilities. Its relation to exact reverse transition-KL is treated separately. See <a href="https://github.com/ModalityDance/optd/blob/main/docs/method.md">implementation details</a>.</p>
   </section>
   <section id="experiments">
     <h2>Experimental settings</h2>
@@ -94,12 +112,24 @@ print(tokenizer.decode(output[0, inputs.input_ids.shape[-1]:], skip_special_toke
       <thead><tr><th>Student</th><th>Domains</th><th>Training updates</th><th>Generation mode</th></tr></thead>
       <tbody><tr><td>R1-Distill-Qwen-1.5B</td><td>Math + coding; three-domain extension</td><td>150</td><td>Reasoning</td></tr><tr><td>Qwen3-4B</td><td>Math + coding</td><td>50</td><td>Non-thinking</td></tr><tr><td>R1-Distill-Qwen-7B</td><td>Math + coding</td><td>100</td><td>Reasoning</td></tr></tbody>
     </table></div>
-    <p style="margin-top:20px">Evaluation covers AIME24/25, AIMO, LiveCodeBench v5, CodeContests, Codeforces with a local CodeElo estimate, and IFEval. See the <a href="evaluation.md">protocols and release scope</a> before comparing scores.</p>
+    <p style="margin-top:20px">Evaluation covers AIME24/25, AIMO, LiveCodeBench v5, CodeContests, Codeforces with a local CodeElo estimate, and IFEval. See the <a href="https://github.com/ModalityDance/optd/blob/main/docs/evaluation.md">protocols and release scope</a> before comparing scores.</p>
   </section>
   <section id="resources">
     <h2>Resources</h2>
-    <p><a href="../README.md">Installation and training</a> · <a href="data.md">Models and dataset preparation</a> · <a href="evaluation.md">Evaluation</a></p>
-    <p><a href="../README.md#checkpoints">Six released OPTD checkpoints</a> are available on Hugging Face with BF16 weights, tokenizers, and SHA256 manifests. Read the paper on <a href="https://arxiv.org/abs/2610.28048">arXiv</a>. Benchmark data remains a separate prerequisite.</p>
+    <p><a href="https://github.com/ModalityDance/optd/blob/main/README.md">Installation and training</a> · <a href="https://github.com/ModalityDance/optd/blob/main/docs/data.md">Models and dataset preparation</a> · <a href="https://github.com/ModalityDance/optd/blob/main/docs/evaluation.md">Evaluation</a></p>
+    <p><a href="https://github.com/ModalityDance/optd/blob/main/README.md#checkpoints">Six released OPTD checkpoints</a> are available on Hugging Face with BF16 weights, tokenizers, and SHA256 manifests. Read the paper on <a href="https://arxiv.org/abs/2610.28048">arXiv</a>. Benchmark data remains a separate prerequisite.</p>
+  </section>
+  <section id="citation">
+    <h2>Citation</h2>
+    <pre>@misc{optd2026,
+  title         = {On-Policy Transition Distillation},
+  author        = {You, Runyang and Li, Yongqi and Yu, Tiezheng and Li, Wenjie},
+  year          = {2026},
+  eprint        = {2610.28048},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2610.28048}
+}</pre>
   </section>
   <footer>OPTD · On-Policy Transition Distillation. Built on OPD and verl. See the repository licenses and third-party notices.</footer>
 </main>

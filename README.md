@@ -6,7 +6,7 @@
   <a href="https://huggingface.co/papers/2610.28048">
     <img src="https://img.shields.io/badge/Hugging%20Face-Paper-fcc21b?style=for-the-badge&amp;logo=huggingface&amp;logoColor=white" alt="Hugging Face Paper">
   </a>
-  <a href="docs/index.html">
+  <a href="https://modalitydance.github.io/optd/">
     <img src="https://img.shields.io/badge/Project-Page-2ea44f?style=for-the-badge" alt="Project Page">
   </a>
   <a href="https://huggingface.co/collections/ModalityDance/optd">
