@@ -15,7 +15,7 @@ tags:
 
 # OPTD-Qwen3-4B-Mid
 
-[arXiv](https://arxiv.org/abs/XXXX.XXXXX) · [Hugging Face Paper](https://huggingface.co/papers/XXXX.XXXXX) · [Project Page](https://PROJECT_PAGE_URL) · [All OPTD models](https://huggingface.co/collections/ModalityDance/optd)
+[arXiv](https://arxiv.org/abs/2610.28048) · [Hugging Face Paper](https://huggingface.co/papers/2610.28048) · [All OPTD models](https://huggingface.co/collections/ModalityDance/optd)
 
 An OPTD model trained from [Qwen/Qwen3-4B](https://huggingface.co/Qwen/Qwen3-4B) with specialists in **mathematics and coding**. This is a complete model that can be used directly for text generation.
 
@@ -88,17 +88,16 @@ Compare this checkpoint using the paper’s prompt mode, dataset revisions, samp
 
 ## Citation
 
-`XXXX.XXXXX` and `PROJECT_PAGE_URL` are placeholders for the arXiv id and the project page.
 
 ```bibtex
 @misc{optd2026,
   title         = {On-Policy Transition Distillation},
-  author        = {Authors},
+  author        = {You, Runyang and Li, Yongqi and Yu, Tiezheng and Li, Wenjie},
   year          = {2026},
-  eprint        = {XXXX.XXXXX},
+  eprint        = {2610.28048},
   archivePrefix = {arXiv},
   primaryClass  = {cs.CL},
-  url           = {https://arxiv.org/abs/XXXX.XXXXX}
+  url           = {https://arxiv.org/abs/2610.28048}
 }
 ```
 

@@ -1,12 +1,12 @@
 <div align="center">
   <h1>OPTD: On-Policy Transition Distillation</h1>
-  <a href="https://arxiv.org/abs/XXXX.XXXXX">
-    <img src="https://img.shields.io/badge/arXiv-XXXX.XXXXX-b31b1b?style=for-the-badge" alt="arXiv">
+  <a href="https://arxiv.org/abs/2610.28048">
+    <img src="https://img.shields.io/badge/arXiv-2610.28048-b31b1b?style=for-the-badge" alt="arXiv">
   </a>
-  <a href="https://huggingface.co/papers/XXXX.XXXXX">
+  <a href="https://huggingface.co/papers/2610.28048">
     <img src="https://img.shields.io/badge/Hugging%20Face-Paper-fcc21b?style=for-the-badge&amp;logo=huggingface&amp;logoColor=white" alt="Hugging Face Paper">
   </a>
-  <a href="https://PROJECT_PAGE_URL">
+  <a href="docs/index.html">
     <img src="https://img.shields.io/badge/Project-Page-2ea44f?style=for-the-badge" alt="Project Page">
   </a>
   <a href="https://huggingface.co/collections/ModalityDance/optd">
@@ -16,20 +16,18 @@
     <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License">
   </a>
   <p>
-    <a href="#overview">Overview</a> ·
+    <a href="#quick-start">Quick start</a> ·
     <a href="#usage-example">Usage</a> ·
     <a href="#how-it-works">How it works</a> ·
     <a href="#checkpoints">Models</a> ·
     <a href="#inference">Inference</a> ·
-    <a href="#getting-started">Training</a> ·
-    <a href="docs/evaluation.md">Evaluation</a> ·
+    <a href="#community">Community</a> ·
     <a href="#citation">Citation</a>
   </p>
 </div>
 
 Code for **On-Policy Transition Distillation (OPTD)**, a method for transferring specialist capabilities into a single language model.
 
-`XXXX.XXXXX` and `PROJECT_PAGE_URL` are placeholders for the arXiv id, the Hugging Face paper page, and the project page.
 
 ## Overview
 
@@ -41,11 +39,54 @@ OPTD brings this additional supervision to **on-policy distillation**, where the
 
 For a given response prefix, we compare how teacher and student change the log probability of the same candidate token between two selected layers. This gives the student a training signal about the teacher's prediction changes along that part of the network. We apply this supervision across selected layer segments while retaining the standard final-output distillation objective.
 
-We study OPTD with DeepSeek-R1-Distill-Qwen-1.5B/7B and Qwen3-4B, using specialists in mathematics, coding, and instruction following. Each training prompt is supervised by the specialist for its domain. See [method details](docs/method.md) for the objective and implementation.
+We study OPTD with DeepSeek-R1-Distill-Qwen-1.5B/7B and Qwen3-4B, using specialists in mathematics, coding, and instruction following. Each training prompt is supervised by the specialist for its domain. See [How it works](#how-it-works) and [method details](docs/method.md).
+
+## Quick Start
+
+Released checkpoints can be loaded without this environment. The steps below install the training stack, point it at the paper's models and data, and launch one OPTD run.
+
+### Installation
+
+Use Linux with NVIDIA GPUs, a CUDA-12-compatible driver, and Python 3.12:
+
+```bash
+conda create -n optd python=3.12 -y
+conda activate optd
+bash scripts/setup_oprd_env.sh
+```
+
+Single-prompt generation only needs PyTorch, Transformers, and Accelerate. See [Usage Example](#usage-example).
+
+### Data
+
+Download a student and its domain teachers, then prepare the training data using the [data preparation guide](docs/data.md). The guide lists the models and datasets used in the paper.
+
+Set the local paths and available GPUs. Coding tasks also require a running SandboxFusion service:
+
+```bash
+export ACTOR_MODEL_PATH=/path/to/student
+export REWARD_MODEL_PATH=/path/to/math_teacher
+export SECONDARY_REWARD_MODEL_PATH=/path/to/code_teacher
+export TRAIN_DATASET=/path/to/prepared_train.parquet
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+export SANDBOX_FUSION_URL=http://127.0.0.1:8080/run_code
+```
+
+### Running
+
+Train Qwen3-4B with the paper's Late configuration:
+
+```bash
+python scripts/train.py --config configs/4b_late.json --method optd
+```
+
+To run the OPD baseline with the same configuration, use `--method opd`. Add `--dry-run` to inspect the settings before launching a job.
+
+The [training guide](docs/training.md) covers the other model sizes, the three-domain setting, configuration options, and tests. Models, datasets, and trained checkpoints are separate from this source release.
 
 ## Usage Example
 
-Released checkpoints are complete models. A typical use is to load one checkpoint, format a prompt, and generate. Training a new student is covered in [Getting started](#getting-started).
+Released checkpoints are complete models. A typical use is to load one checkpoint, format a prompt, and generate. Training a new student is covered in [Quick Start](#quick-start).
 
 ```python
 import torch
@@ -74,7 +115,7 @@ with torch.inference_mode():
 print(tokenizer.decode(output[0, inputs.input_ids.shape[-1]:], skip_special_tokens=True))
 ```
 
-`max_new_tokens=1024` is only for this short prompt. Paper evaluation uses benchmark-specific limits. Download commands, the reasoning-mode variant, and dataset generation are in [Inference](#inference). The same snippet is the quick start on each [model card](docs/model_cards/OPTD-Qwen3-4B-Late.md).
+`max_new_tokens=1024` is only for this short prompt. Paper evaluation uses benchmark-specific limits. Download commands, the reasoning-mode variant, and dataset generation are in [Inference](#inference). The same snippet is on each [model card](docs/model_cards/OPTD-Qwen3-4B-Late.md).
 
 ## How It Works
 
@@ -85,8 +126,6 @@ At a high level, the workflow proceeds as follows:
 1. **On-policy generation** — The student samples a response for each training prompt. The prompt is routed to the specialist for its domain (mathematics, coding, or instruction following).
 2. **Transition comparison** — On the same response prefix and the same candidate tokens, teacher and student log probabilities are read at selected layers. Each segment contributes the change in log probability between its source and destination layer. The student is trained to match the teacher’s increments, using candidates from the teacher’s final-policy top-16 support.
 3. **Joint distillation** — The frozen teacher also supplies the usual final-layer distribution match. OPTD adds the transition losses, equally weighted across the selected path, to that final-policy objective.
-
-![Method overview of OPTD](assets/overview.png)
 
 Mid and Late name where those layers sit in the network. They are experimental variants, not successive releases. The practical update, layer indices, and the relation to reverse transition KL are in [method details](docs/method.md).
 
@@ -109,7 +148,7 @@ Each release is a complete model with its tokenizer. The [inference](#inference)
 
 Released checkpoints load with Transformers or vLLM. A teacher model is required only when training a new student.
 
-Single-prompt generation needs PyTorch, Transformers, and Accelerate. Dataset generation uses the [training environment](#1-install), which installs vLLM 0.11.0. Coding benchmarks also need a SandboxFusion service at `http://127.0.0.1:8080/run_code`.
+Single-prompt generation needs PyTorch, Transformers, and Accelerate. Dataset generation uses the [Quick Start](#installation) environment, which installs vLLM 0.11.0. Coding benchmarks also need a SandboxFusion service at `http://127.0.0.1:8080/run_code`.
 
 ```bash
 python -m pip install torch transformers accelerate huggingface_hub
@@ -302,69 +341,33 @@ Run the same checker on the other five checkpoints when comparing sizes. Keep th
 
 Sampling settings, merge checks, and grading coverage are in the [evaluation guide](docs/evaluation.md). Release commits and file hashes are in [inference notes](docs/inference.md).
 
-## Getting started
-
-To use an existing model, follow [Inference](#inference). The steps below are for training OPTD.
-
-### 1. Install
-
-Use Linux with NVIDIA GPUs, a CUDA-12-compatible driver, and Python 3.12:
-
-```bash
-conda create -n optd python=3.12 -y
-conda activate optd
-bash scripts/setup_oprd_env.sh
-```
-
-### 2. Prepare models and data
-
-Download a student and its domain teachers, then prepare the training data using the [data preparation guide](docs/data.md). The guide lists the models and datasets used in the paper.
-
-Set the local paths and available GPUs. Coding tasks also require a running SandboxFusion service:
-
-```bash
-export ACTOR_MODEL_PATH=/path/to/student
-export REWARD_MODEL_PATH=/path/to/math_teacher
-export SECONDARY_REWARD_MODEL_PATH=/path/to/code_teacher
-export TRAIN_DATASET=/path/to/prepared_train.parquet
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-export SANDBOX_FUSION_URL=http://127.0.0.1:8080/run_code
-```
-
-### 3. Train
-
-For example, train Qwen3-4B with the paper's Late configuration:
-
-```bash
-python scripts/train.py --config configs/4b_late.json --method optd
-```
-
-To run the OPD baseline with the same configuration, use `--method opd`. Add `--dry-run` to inspect the settings before launching a job.
-
-The [training guide](docs/training.md) covers the other model sizes, the three-domain setting, configuration options, and tests. Models, datasets, and trained checkpoints are separate from this source release.
-
 ## Evaluation
 
 We evaluate mathematics on AIME24/25 and AIMO; coding on LiveCodeBench v5, CodeContests, and Codeforces; and instruction following on IFEval.
 
 The commands in [Inference](#inference) run those datasets for each released model size. The [evaluation guide](docs/evaluation.md) records benchmark protocols, coverage checks, and required external resources.
 
+## Community
+
+- Models: [ModalityDance/optd](https://huggingface.co/collections/ModalityDance/optd)
+- Paper: [arXiv:2610.28048](https://arxiv.org/abs/2610.28048) · [Hugging Face Paper](https://huggingface.co/papers/2610.28048)
+- Questions about reproducing a run belong in the repository issues, with the config name and `--dry-run` output
+
+## Acknowledgements
+
+This implementation builds on OPD and verl. See [third-party notices](THIRD_PARTY_NOTICES.md), the [repository license](LICENSE), and the [verl license](verl/LICENSE).
+
 ## Citation
 
-The arXiv id below is a placeholder. Use the same id in the badges at the top, `https://arxiv.org/abs/XXXX.XXXXX`, `https://huggingface.co/papers/XXXX.XXXXX`, and `https://PROJECT_PAGE_URL`.
 
 ```bibtex
 @misc{optd2026,
   title         = {On-Policy Transition Distillation},
-  author        = {Authors},
+  author        = {You, Runyang and Li, Yongqi and Yu, Tiezheng and Li, Wenjie},
   year          = {2026},
-  eprint        = {XXXX.XXXXX},
+  eprint        = {2610.28048},
   archivePrefix = {arXiv},
   primaryClass  = {cs.CL},
-  url           = {https://arxiv.org/abs/XXXX.XXXXX}
+  url           = {https://arxiv.org/abs/2610.28048}
 }
 ```
-
-## Acknowledgements and license
-
-This implementation builds on OPD and verl. See [third-party notices](THIRD_PARTY_NOTICES.md), the [repository license](LICENSE), and the [verl license](verl/LICENSE).
